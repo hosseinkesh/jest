@@ -1,18 +1,25 @@
 export async function retryOperation<T>(
-  fn: () => Promise<T>,
+  operation: () => Promise<T>,
   retries: number,
-  delay: number
+  delayMs: number
 ): Promise<T> {
-  try {
-    return await fn();
-  } catch (err) {
-    if (retries <= 1) throw err;
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        retryOperation(fn, retries - 1, delay)
-          .then(resolve)
-          .catch(reject);
-      }, delay);
-    });
-  }
+  let attempts = 0;
+
+  return new Promise<T>((resolve, reject) => {
+    const tryOnce = () => {
+      attempts += 1;
+      Promise.resolve()
+        .then(() => operation())
+        .then(resolve)
+        .catch((err) => {
+          if (attempts >= retries) {
+            reject(err);
+          } else {
+            setTimeout(tryOnce, delayMs);
+          }
+        });
+    };
+
+    tryOnce();
+  });
 }

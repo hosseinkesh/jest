@@ -1,24 +1,15 @@
 // __tests__/retryOperation.test.ts
 import { retryOperation } from "../src/utils/retryOperation";
 
-jest.useFakeTimers();
-
 describe("retryOperation", () => {
   afterEach(() => {
-    jest.clearAllTimers();
     jest.clearAllMocks();
   });
 
   it("succeeds on first attempt", async () => {
     const mockOp = jest.fn().mockResolvedValue("success");
-    const promise = retryOperation(mockOp, 2, 1000);
-
-    expect(mockOp).toHaveBeenCalledTimes(1);
-
-    await jest.advanceTimersByTimeAsync(1000); // flush timers
-    await Promise.resolve(); // flush microtasks
-
-    await expect(promise).resolves.toBe("success");
+    const result = await retryOperation(mockOp, 2, 0);
+    expect(result).toBe("success");
     expect(mockOp).toHaveBeenCalledTimes(1);
   });
 
@@ -28,26 +19,34 @@ describe("retryOperation", () => {
       .mockRejectedValueOnce(new Error("fail"))
       .mockResolvedValueOnce("success");
 
-    const promise = retryOperation(mockOp, 2, 1000);
-
-    expect(mockOp).toHaveBeenCalledTimes(1);
-
-    await jest.advanceTimersByTimeAsync(1000);
-
-    await expect(promise).resolves.toBe("success");
+    const result = await retryOperation(mockOp, 2, 0);
+    expect(result).toBe("success");
     expect(mockOp).toHaveBeenCalledTimes(2);
   });
 
-  //   it("fails after all retries", async () => {
-  //     const mockOp = jest.fn().mockRejectedValue(new Error("fail"));
+  it("fails after all retries", async () => {
+    const mockOp = jest.fn().mockRejectedValue(new Error("fail"));
 
-  //     const promise = retryOperation(mockOp, 2, 1000);
+    await expect(retryOperation(mockOp, 2, 0)).rejects.toThrow("fail");
+    expect(mockOp).toHaveBeenCalledTimes(2);
+  });
 
-  //     expect(mockOp).toHaveBeenCalledTimes(1);
+  it("does not retry when retries is 1", async () => {
+    const mockOp = jest.fn().mockRejectedValue(new Error("no-retry"));
 
-  //     await jest.advanceTimersByTimeAsync(1000);
+    await expect(retryOperation(mockOp, 1, 0)).rejects.toThrow("no-retry");
+    expect(mockOp).toHaveBeenCalledTimes(1);
+  });
 
-  //     await expect(promise).rejects.toThrow("fail");
-  //     expect(mockOp).toHaveBeenCalledTimes(2);
-  //   });
+  it("succeeds on the third attempt when retries is 3", async () => {
+    const mockOp = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("fail1"))
+      .mockRejectedValueOnce(new Error("fail2"))
+      .mockResolvedValueOnce("finally");
+
+    const result = await retryOperation(mockOp, 3, 0);
+    expect(result).toBe("finally");
+    expect(mockOp).toHaveBeenCalledTimes(3);
+  });
 });
