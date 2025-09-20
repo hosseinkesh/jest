@@ -19,3 +19,18 @@ export async function fetchUserWithRetry(id: string) {
   }
 }
 
+// src/UserService.ts
+import { Database } from "./database";
+
+export class UserService {
+  private db: Database;
+
+  constructor() {
+    this.db = new Database();
+  }
+
+  getUser(id: number) {
+    this.db.connect();
+    return this.db.query(`SELECT * FROM users WHERE id=${id}`);
+  }
+}
