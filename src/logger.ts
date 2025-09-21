@@ -6,3 +6,15 @@ export function log(message: string) {
 export function warn(message: string) {
   log(`WARN: ${message}`);
 }
+
+// src/logger.ts
+export class Logger {
+  log(message: string) {
+    return `[LOG]: ${message}`;
+  }
+
+  error(message: string) {
+    return `[ERROR]: ${message}`;
+  }
+}
+
